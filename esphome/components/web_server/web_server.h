@@ -223,6 +223,9 @@ class WebServer : public Controller, public Component, public AsyncWebHandler {
 
   void dump_config() override;
 
+  void handle_info_index_request(AsyncWebServerRequest *request);
+  void handle_my_wifi_reset(AsyncWebServerRequest *request);
+  void handle_restart(AsyncWebServerRequest *request);
   /// MQTT setup priority.
   float get_setup_priority() const override;
 

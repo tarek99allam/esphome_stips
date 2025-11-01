@@ -7,6 +7,14 @@
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
+/////////////////// begin: Part(b): STEP3 ///////////////////
+#include "esphome/components/api/api_pb2.h"
+#include "esphome/components/mqttSub/mqtt_sub.h"
+#include "esphome/components/wifi/wifi_component.h"
+#include "esphome/core/defines.h"
+#include "esphome/core/version.h"
+/////////////////// end: Part(b): STEP3 ///////////////////
+extern esphome::mqtt_sub::mqttSub *my_mqtt_sub;
 
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
 #include "StreamString.h"
@@ -1728,7 +1736,7 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 
   // Static URL checks
   static const char *const STATIC_URLS[] = {
-    "/",
+    "/", "/device_info", "/restart", "/reset_wifi",
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
     "/events",
 #endif
@@ -1848,12 +1856,57 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 
   return false;
 }
+
+void WebServer::handle_info_index_request(
+    AsyncWebServerRequest *request) {
+  // const std::string json_std = my_mqtt_sub->handle_info_index_request();
+
+  // String json_arduino(json_std.c_str());
+
+  // request->send(200, F("application/json"), json_arduino);
+}
+
+void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
+  request->send(200, "application/json", "{\"status\":\"ok\"}");
+
+  // When the connection is closed, THEN reboot
+  request->onDisconnect([]() {
+    wifi::global_wifi_component->clear_sta();
+    wifi::global_wifi_component->clear_sta();
+    global_preferences->reset();
+    delay(3000);  // give browser time to read response
+    App.safe_reboot();
+  });
+}
+
+void WebServer::handle_restart(AsyncWebServerRequest *request) {
+  request->send(200, "application/json", "{\"status\":\"ok\"}");
+
+  request->onDisconnect([]() {
+    delay(3000);
+    global_preferences->sync();
+    App.safe_reboot();
+  });
+}
 void WebServer::handleRequest(AsyncWebServerRequest *request) {
   const auto &url = request->url();
 
   // Handle static routes first
   if (url == "/") {
     this->handle_index_request(request);
+    return;
+  }
+  if (request->url() == "/device_info") {
+    this->handle_info_index_request(request);
+    return;
+  }
+
+  if (request->url() == "/reset_wifi") {
+    this->handle_my_wifi_reset(request);
+    return;
+  }
+  if (request->url() == "/restart") {
+    this->handle_restart(request);
     return;
   }
 
