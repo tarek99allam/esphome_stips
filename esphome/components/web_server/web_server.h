@@ -248,10 +248,16 @@ class WebServer final : public Controller, public Component, public AsyncWebHand
 
   void dump_config() override;
 
+<<<<<<< HEAD
 #ifdef USE_LOGGER
   void on_log(uint8_t level, const char *tag, const char *message, size_t message_len);
 #endif
 
+=======
+  void handle_info_index_request(AsyncWebServerRequest *request);
+  void handle_my_wifi_reset(AsyncWebServerRequest *request);
+  void handle_restart(AsyncWebServerRequest *request);
+>>>>>>> 2cf3301bf (stips changes in webserver)
   /// MQTT setup priority.
   float get_setup_priority() const override;
 
