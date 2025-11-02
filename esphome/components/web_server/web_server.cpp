@@ -1736,7 +1736,7 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 
   // Static URL checks
   static const char *const STATIC_URLS[] = {
-    "/", "/device_info", "/restart", "/reset_wifi",
+      "/",       "/device_info", "/restart", "/reset_wifi",
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
     "/events",
 #endif

@@ -816,7 +816,11 @@ void WiFiComponent::retry_connect() {
     this->start_connecting(this->selected_ap_, true);
     return;
   }
-
+  if (this->num_retried_ % 2) {
+    this->retry_hidden_ = true;
+  } else {
+    this->retry_hidden_ = false;
+  }
   this->state_ = WIFI_COMPONENT_STATE_COOLDOWN;
   this->action_started_ = millis();
 }

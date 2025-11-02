@@ -27,7 +27,7 @@ void CaptivePortal::handle_config(AsyncWebServerRequest *request) {
     if (scan.get_is_hidden())
       continue;
 
-      // Assumes no " in ssid, possible unicode isses?
+    // Assumes no " in ssid, possible unicode isses?
 #ifdef USE_ESP8266
     stream->print(ESPHOME_F(",{\"ssid\":\""));
     stream->print(scan.get_ssid().c_str());
@@ -52,7 +52,12 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
   ESP_LOGI(TAG, "  Password=" LOG_SECRET("'%s'"), psk.c_str());
   wifi::global_wifi_component->save_wifi_sta(ssid, psk);
   wifi::global_wifi_component->start_scanning();
-  request->redirect(ESPHOME_F("/?save"));
+  request->send(200, "application/json", "{\"status\":\"ok\"}");
+  request->onDisconnect([]() {
+    delay(3000);
+    global_preferences->sync();
+    App.safe_reboot();
+  });
 }
 
 void CaptivePortal::setup() {
@@ -75,7 +80,7 @@ void CaptivePortal::start() {
 #ifdef USE_ARDUINO
   this->dns_server_ = make_unique<DNSServer>();
   this->dns_server_->setErrorReplyCode(DNSReplyCode::NoError);
-  this->dns_server_->start(53, ESPHOME_F("*"), ip);
+  // this->dns_server_->start(53, F("*"), ip);
 #endif
 
   this->initialized_ = true;
