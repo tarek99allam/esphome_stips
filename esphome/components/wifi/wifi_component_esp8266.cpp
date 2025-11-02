@@ -40,6 +40,7 @@ extern "C" {
 
 namespace esphome {
 namespace wifi {
+static bool s_hostname_set_ok = false;
 
 static const char *const TAG = "wifi_esp8266";
 
@@ -216,10 +217,16 @@ bool WiFiComponent::wifi_apply_hostname_() {
     if (netif_dhcp_data(intf) != nullptr) {
       // renew already started DHCP leases
       err_t lwipret = dhcp_renew(intf);
-      if (lwipret != ERR_OK) {
-        ESP_LOGW(TAG, "wifi_apply_hostname_(%s): lwIP error %d on interface %c%c (index %d)", intf->hostname,
-                 (int) lwipret, intf->name[0], intf->name[1], intf->num);
-        ret = false;
+      if (lwipret == ERR_OK) {
+        // success on at least one interface → we’re done forever
+        s_hostname_set_ok = true;
+      } else {
+        // exactly what you were seeing: -16
+        ESP_LOGW(TAG, "wifi_apply_hostname_(%s): lwIP error %d on interface %c%c (index %d) – keeping old hostname",
+                 intf->hostname ? intf->hostname : "(null)", (int) lwipret, intf->name[0], intf->name[1], intf->num);
+        // don’t try to renew again this boot – this avoids repeated
+        // allocations/failures that end up corrupting memory
+        s_hostname_set_ok = true;
       }
     }
   }
