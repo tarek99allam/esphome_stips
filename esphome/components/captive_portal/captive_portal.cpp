@@ -29,7 +29,7 @@ void CaptivePortal::handle_config(AsyncWebServerRequest *request) {
     if (scan.get_is_hidden())
       continue;
 
-      // Assumes no " in ssid, possible unicode isses?
+    // Assumes no " in ssid, possible unicode isses?
 #ifdef USE_ESP8266
     stream->print(ESPHOME_F(",{\"ssid\":\""));
     stream->print(scan.get_ssid().c_str());
@@ -47,6 +47,7 @@ void CaptivePortal::handle_config(AsyncWebServerRequest *request) {
   request->send(stream);
 }
 void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
+<<<<<<< HEAD
   const auto &ssid = request->arg("ssid");
   const auto &psk = request->arg("psk");
   ESP_LOGI(TAG,
@@ -62,6 +63,21 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
   this->defer([ssid, psk]() { wifi::global_wifi_component->save_wifi_sta(ssid.c_str(), psk.c_str()); });
 #endif
   request->send(200, ESPHOME_F("text/plain"), ESPHOME_F("Saved. Connecting..."));
+=======
+  std::string ssid = request->arg("ssid").c_str();  // NOLINT(readability-redundant-string-cstr)
+  std::string psk = request->arg("psk").c_str();    // NOLINT(readability-redundant-string-cstr)
+  ESP_LOGI(TAG, "Requested WiFi Settings Change:");
+  ESP_LOGI(TAG, "  SSID='%s'", ssid.c_str());
+  ESP_LOGI(TAG, "  Password=" LOG_SECRET("'%s'"), psk.c_str());
+  wifi::global_wifi_component->save_wifi_sta(ssid, psk);
+  wifi::global_wifi_component->start_scanning();
+  request->send(200, "application/json", "{\"status\":\"ok\"}");
+  request->onDisconnect([]() {
+    delay(3000);
+    global_preferences->sync();
+    App.safe_reboot();
+  });
+>>>>>>> 9810584c4 (stips edits- no boad cast in captive portal with 200 sent - try hidden in even trys)
 }
 
 void CaptivePortal::setup() {
@@ -83,7 +99,7 @@ void CaptivePortal::start() {
 #elif defined(USE_ARDUINO)
   this->dns_server_ = make_unique<DNSServer>();
   this->dns_server_->setErrorReplyCode(DNSReplyCode::NoError);
-  this->dns_server_->start(53, ESPHOME_F("*"), ip);
+  // this->dns_server_->start(53, F("*"), ip);
 #endif
 
   this->initialized_ = true;

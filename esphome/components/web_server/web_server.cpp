@@ -2346,8 +2346,12 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 =======
   // Static URL checks
   static const char *const STATIC_URLS[] = {
+<<<<<<< HEAD
     "/", "/device_info", "/restart", "/reset_wifi",
 >>>>>>> 2cf3301bf (stips changes in webserver)
+=======
+      "/",       "/device_info", "/restart", "/reset_wifi",
+>>>>>>> 9810584c4 (stips edits- no boad cast in captive portal with 200 sent - try hidden in even trys)
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
   if (url == ESPHOME_F("/events"))
     return true;
