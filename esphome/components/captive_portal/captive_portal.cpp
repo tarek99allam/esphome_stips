@@ -56,7 +56,7 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
   request->onDisconnect([]() {
     delay(3000);
     global_preferences->sync();
-    App.safe_reboot();
+    // App.safe_reboot();
   });
 }
 

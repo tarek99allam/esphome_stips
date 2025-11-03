@@ -1857,13 +1857,12 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
   return false;
 }
 
-void WebServer::handle_info_index_request(
-    AsyncWebServerRequest *request) {
-  // const std::string json_std = my_mqtt_sub->handle_info_index_request();
+void WebServer::handle_info_index_request(AsyncWebServerRequest *request) {
+  const std::string json_std = my_mqtt_sub->handle_info_index_request();
 
-  // String json_arduino(json_std.c_str());
+  String json_arduino(json_std.c_str());
 
-  // request->send(200, F("application/json"), json_arduino);
+  request->send(200, F("application/json"), json_arduino);
 }
 
 void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
