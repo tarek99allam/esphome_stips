@@ -68,14 +68,20 @@ void MQTTClientComponent::setup() {
     this->state_ = MQTT_CLIENT_DISCONNECTED;
     this->disconnect_reason_ = reason;
   });
-#ifdef USE_LOGGER
-  if (this->is_log_message_enabled() && logger::global_logger != nullptr) {
-    logger::global_logger->add_log_callback(
-        this, [](void *self, uint8_t level, const char *tag, const char *message, size_t message_len) {
-          static_cast<MQTTClientComponent *>(self)->on_log(level, tag, message, message_len);
-        });
-  }
-#endif
+  // logger to mqtt
+  //  #ifdef USE_LOGGER
+  //    if (this->is_log_message_enabled() && logger::global_logger != nullptr) {
+  //      logger::global_logger->add_on_log_callback(
+  //          [this](int level, const char *tag, const char *message, size_t message_len) {
+  //            if (level <= this->log_level_ && this->is_connected()) {
+  //              this->publish({.topic = this->log_message_.topic,
+  //                             .payload = std::string(message, message_len),
+  //                             .qos = this->log_message_.qos,
+  //                             .retain = this->log_message_.retain});
+  //            }
+  //          });
+  //    }
+  //  #endif
 
   if (this->is_discovery_ip_enabled()) {
     this->subscribe(
@@ -208,9 +214,9 @@ void MQTTClientComponent::dump_config() {
                   this->discovery_info_.prefix.c_str(), YESNO(this->discovery_info_.retain));
   }
   ESP_LOGCONFIG(TAG, "  Topic Prefix: '%s'", this->topic_prefix_.c_str());
-  if (!this->log_message_.topic.empty()) {
-    ESP_LOGCONFIG(TAG, "  Log Topic: '%s'", this->log_message_.topic.c_str());
-  }
+  // if (!this->log_message_.topic.empty()) {
+  //   ESP_LOGCONFIG(TAG, "  Log Topic: '%s'", this->log_message_.topic.c_str());
+  // }
   if (!this->availability_.topic.empty()) {
     ESP_LOGCONFIG(TAG, "  Availability: '%s'", this->availability_.topic.c_str());
   }
