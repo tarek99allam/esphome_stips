@@ -440,11 +440,24 @@ void LD2420Component::readline_(int rx_data, uint8_t *buffer, int len) {
   } else {
     // We should never get here, but just in case...
     ESP_LOGW(TAG, "Max command length exceeded; ignoring");
+    ESP_LOGW(TAG, "Received data: %45s", format_hex_pretty(buffer, this->buffer_pos_).c_str());
     this->buffer_pos_ = 0;
   }
   if (this->buffer_pos_ < 4) {
     return;  // Not enough data to process yet
   }
+
+  // static const uint8_t ENERGY_FOOTER_NORMAL[] = {0xF8, 0xF7, 0xF6, 0xF5};
+  // static const uint8_t ENERGY_FOOTER_FA[] = {0xF8, 0xF7, 0xF6, 0xFA};
+
+  // if (memcmp(&buffer[this->buffer_pos_ - 4], ENERGY_FOOTER_NORMAL, 4) == 0 ||
+  //     memcmp(&buffer[this->buffer_pos_ - 4], ENERGY_FOOTER_FA, 4) == 0) {
+  //   //   // ESP_LOGW(TAG, "Energy frame footer accepted: %s", format_hex_pretty(&buffer[this->buffer_pos_ - 4],
+  //   //   4).c_str());
+
+  //   this->handle_energy_mode_(buffer, this->buffer_pos_);
+  //   this->buffer_pos_ = 0;
+  // }
   if (memcmp(&buffer[this->buffer_pos_ - 4], &CMD_FRAME_FOOTER, sizeof(CMD_FRAME_FOOTER)) == 0) {
     this->cmd_active_ = false;  // Set command state to inactive after response
     this->handle_ack_data_(buffer, this->buffer_pos_);
@@ -461,6 +474,7 @@ void LD2420Component::readline_(int rx_data, uint8_t *buffer, int len) {
 }
 
 void LD2420Component::handle_energy_mode_(uint8_t *buffer, int len) {
+  // ESP_LOGW(TAG, "Energy mode data received");
   uint8_t index = 6;  // Start at presence byte position
   uint16_t range;
   const uint8_t elements = sizeof(this->gate_energy_) / sizeof(this->gate_energy_[0]);
@@ -508,6 +522,8 @@ void LD2420Component::handle_energy_mode_(uint8_t *buffer, int len) {
 }
 
 void LD2420Component::handle_simple_mode_(const uint8_t *inbuf, int len) {
+  // ESP_LOGW(TAG, "Simple mode data receiveds");
+
   const uint8_t bufsize = 16;
   uint8_t index{0};
   uint8_t pos{0};
