@@ -72,12 +72,17 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
   wifi::global_wifi_component->save_wifi_sta(ssid, psk);
   wifi::global_wifi_component->start_scanning();
   request->send(200, "application/json", "{\"status\":\"ok\"}");
+#ifndef USE_ESP_IDF_VERSION_CODE
   request->onDisconnect([]() {
     delay(3000);
     global_preferences->sync();
     App.safe_reboot();
   });
+<<<<<<< HEAD
 >>>>>>> 9810584c4 (stips edits- no boad cast in captive portal with 200 sent - try hidden in even trys)
+=======
+#endif
+>>>>>>> 02cea6427 (prevent error in esp32 build)
 }
 
 void CaptivePortal::setup() {
