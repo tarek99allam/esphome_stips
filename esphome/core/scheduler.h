@@ -447,8 +447,8 @@ class Scheduler {
   // Remove before 2026.8.0 along with all retry code.
   // IMPORTANT: Must not be inlined - retry path is cold and deprecated.
   // IMPORTANT: Caller must hold the scheduler lock before calling this function.
-  bool __attribute__((noinline))
-  is_retry_cancelled_locked_(Component *component, NameType name_type, const char *static_name, uint32_t hash_or_id);
+  bool __attribute__((noinline)) is_retry_cancelled_locked_(Component *component, NameType name_type,
+                                                            const char *static_name, uint32_t hash_or_id);
 
 #ifdef ESPHOME_DEBUG_SCHEDULER
   // Helper for debug logging in set_timer_common_ - extracted to reduce code size
