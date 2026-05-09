@@ -1950,7 +1950,6 @@ void WiFiComponent::clear_priorities_if_all_min_() {
   if (this->sta_priorities_.empty()) {
     return;
   }
-<<<<<<< HEAD
 
   int8_t first_priority = this->sta_priorities_[0].priority;
 
@@ -1969,15 +1968,13 @@ void WiFiComponent::clear_priorities_if_all_min_() {
   // All priorities are at minimum - clear the vector to save memory and reset
   ESP_LOGD(TAG, "Clearing BSSID priorities (all at minimum)");
   this->clear_all_bssid_priorities_();
-=======
-  if (this->num_retried_ % 2) {
-    this->retry_hidden_ = true;
-  } else {
-    this->retry_hidden_ = false;
-  }
+  // if (this->num_retried_ % 2) {
+  //   this->retry_hidden_ = true;
+  // } else {
+  //   this->retry_hidden_ = false;
+  // }
   this->state_ = WIFI_COMPONENT_STATE_COOLDOWN;
   this->action_started_ = millis();
->>>>>>> 9810584c4 (stips edits- no boad cast in captive portal with 200 sent - try hidden in even trys)
 }
 
 /// Log failed connection attempt and decrease BSSID priority to avoid repeated failures
