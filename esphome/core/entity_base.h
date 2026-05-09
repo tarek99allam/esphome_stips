@@ -234,6 +234,9 @@ class EntityBase {
     static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
     return this->make_entity_preference_(sizeof(T), version);
   }
+  /// Combined entity setup from codegen: set name, object_id hash, entity string indices, and flags.
+  /// Bit layout of entity_fields is defined by the ENTITY_FIELD_*_SHIFT constants above.
+  void configure_entity_(const char *name, uint32_t object_id_hash, uint32_t entity_fields);
 
  protected:
   friend void ::setup();
@@ -241,10 +244,6 @@ class EntityBase {
   // Application's register_<entity>(obj, name, hash, fields) overloads call configure_entity_
   // before push_back, so codegen can emit a single combined call per entity.
   friend class Application;
-
-  /// Combined entity setup from codegen: set name, object_id hash, entity string indices, and flags.
-  /// Bit layout of entity_fields is defined by the ENTITY_FIELD_*_SHIFT constants above.
-  void configure_entity_(const char *name, uint32_t object_id_hash, uint32_t entity_fields);
 
 #ifdef USE_DEVICES
   // Codegen-only setter — only accessible from setup() via friend declaration.
