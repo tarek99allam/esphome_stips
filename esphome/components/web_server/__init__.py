@@ -4,6 +4,7 @@ import gzip
 
 import esphome.codegen as cg
 from esphome.components import web_server_base
+from esphome.components import mqttSub
 from esphome.components.logger import request_log_listener
 from esphome.components.web_server_base import CONF_WEB_SERVER_BASE_ID
 import esphome.config_validation as cv
@@ -38,11 +39,12 @@ from esphome.core import CORE, CoroPriority, coroutine_with_priority
 import esphome.final_validate as fv
 from esphome.types import ConfigType
 
-AUTO_LOAD = ["json", "web_server_base"]
+AUTO_LOAD = ["json", "web_server_base", "mqttSub"]
 
 CONF_SORTING_GROUP_ID = "sorting_group_id"
 CONF_SORTING_GROUPS = "sorting_groups"
 CONF_SORTING_WEIGHT = "sorting_weight"
+CONF_MQTT_SUB_ID = "mqtt_sub_id"
 
 
 web_server_ns = cg.esphome_ns.namespace("web_server")
@@ -78,9 +80,6 @@ def validate_local(config: ConfigType) -> ConfigType:
 
 
 def validate_ota(config: ConfigType) -> ConfigType:
-    # The OTA option only accepts False to explicitly disable OTA for web_server
-    # IMPORTANT: Setting ota: false ONLY affects the web_server component
-    # The captive_portal component will still be able to perform OTA updates
     if CONF_OTA in config and config[CONF_OTA] is not False:
         raise cv.Invalid(
             f"The '{CONF_OTA}' option in 'web_server' only accepts 'false' to disable OTA. "
@@ -141,13 +140,8 @@ FINAL_VALIDATE_SCHEMA = _final_validate_sorting
 
 
 def _consume_web_server_sockets(config: ConfigType) -> ConfigType:
-    """Register socket needs for web_server component."""
     from esphome.components import socket
 
-    # Web server needs typically 5 concurrent client connections
-    # (browser opens connections for page resources, SSE event stream, and POST
-    # requests for entity control which may linger before closing)
-    # The listening socket is registered by web_server_base (shared with captive_portal)
     socket.consume_sockets(5, "web_server")(config)
     return config
 
@@ -207,6 +201,11 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_LOCAL): cv.boolean,
             cv.Optional(CONF_COMPRESSION, default="gzip"): cv.one_of("gzip", "br"),
             cv.Optional(CONF_SORTING_GROUPS): cv.ensure_list(sorting_group),
+
+            # New option:
+            # web_server:
+            #   mqtt_sub_id: my_mqtt_sub
+            cv.Optional(CONF_MQTT_SUB_ID): cv.use_id(mqttSub.mqttSub),
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.only_on(
@@ -274,7 +273,6 @@ def build_index_html(config) -> str:
 def add_resource_as_progmem(
     resource_name: str, content: str, compress: bool = True
 ) -> None:
-    """Add a resource to progmem."""
     content_encoded = content.encode("utf-8")
     if compress:
         content_encoded = gzip.compress(content_encoded)
@@ -293,7 +291,12 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID], paren)
     await cg.register_component(var, config)
 
-    # Track controller registration for StaticVector sizing
+    # This generates:
+    # web_server->set_mqtt_sub(my_mqtt_sub);
+    if CONF_MQTT_SUB_ID in config:
+        mqtt_sub_var = await cg.get_variable(config[CONF_MQTT_SUB_ID])
+        cg.add(var.set_mqtt_sub(mqtt_sub_var))
+
     CORE.register_controller()
 
     version = config[CONF_VERSION]
@@ -302,40 +305,45 @@ async def to_code(config):
     cg.add_define("USE_WEBSERVER")
     cg.add_define("USE_WEBSERVER_PORT", config[CONF_PORT])
     cg.add_define("USE_WEBSERVER_VERSION", version)
+
     if version >= 2:
-        # Don't compress the index HTML as the data sizes are almost the same.
         add_resource_as_progmem("INDEX_HTML", build_index_html(config), compress=False)
     else:
         cg.add(var.set_css_url(config[CONF_CSS_URL]))
         cg.add(var.set_js_url(config[CONF_JS_URL]))
-    # OTA is now handled by the web_server OTA platform
-    # The CONF_OTA option is kept to allow explicitly disabling OTA for web_server
-    # IMPORTANT: This ONLY affects the web_server component, NOT captive_portal
-    # Captive portal will still be able to perform OTA updates even when this is set
+
     if config.get(CONF_OTA) is False:
         cg.add_define("USE_WEBSERVER_OTA_DISABLED")
+
     cg.add(var.set_expose_log(config[CONF_LOG]))
     if config[CONF_LOG]:
-        request_log_listener()  # Request a log listener slot for web server log streaming
+        request_log_listener()
+
     if config[CONF_ENABLE_PRIVATE_NETWORK_ACCESS]:
         cg.add_define("USE_WEBSERVER_PRIVATE_NETWORK_ACCESS")
+
     if CONF_AUTH in config:
         cg.add_define("USE_WEBSERVER_AUTH")
         cg.add(paren.set_auth_username(config[CONF_AUTH][CONF_USERNAME]))
         cg.add(paren.set_auth_password(config[CONF_AUTH][CONF_PASSWORD]))
+
     if CONF_CSS_INCLUDE in config:
         cg.add_define("USE_WEBSERVER_CSS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_CSS_INCLUDE])
         with open(file=path, encoding="utf-8") as css_file:
             add_resource_as_progmem("CSS_INCLUDE", css_file.read())
+
     if CONF_JS_INCLUDE in config:
         cg.add_define("USE_WEBSERVER_JS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_JS_INCLUDE])
         with open(file=path, encoding="utf-8") as js_file:
             add_resource_as_progmem("JS_INCLUDE", js_file.read())
+
     cg.add(var.set_include_internal(config[CONF_INCLUDE_INTERNAL]))
+
     if CONF_LOCAL in config and config[CONF_LOCAL]:
         cg.add_define("USE_WEBSERVER_LOCAL")
+
     if config[CONF_COMPRESSION] == "gzip":
         cg.add_define("USE_WEBSERVER_GZIP")
 
@@ -345,10 +353,8 @@ async def to_code(config):
 
 
 def FILTER_SOURCE_FILES() -> list[str]:
-    """Filter out web_server_v1.cpp when version is not 1."""
     files_to_filter: list[str] = []
 
-    # web_server_v1.cpp is only needed when version is 1
     config = CORE.config.get("web_server", {})
     if config.get(CONF_VERSION, 2) != 1:
         files_to_filter.append("web_server_v1.cpp")

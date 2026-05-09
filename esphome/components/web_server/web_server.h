@@ -4,6 +4,7 @@
 
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/web_server_base/web_server_base.h"
+#include "esphome/components/mqttSub/mqtt_sub.h"
 #ifdef USE_WEBSERVER
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
@@ -195,7 +196,9 @@ class WebServer final : public Controller, public Component, public AsyncWebHand
 
  public:
   WebServer(web_server_base::WebServerBase *base);
+  void set_mqtt_sub(mqtt_sub::mqttSub *mqtt_sub) { this->mqtt_sub_ = mqtt_sub; }
 
+  mqtt_sub::mqttSub *mqtt_sub_{nullptr};
 #if USE_WEBSERVER_VERSION == 1
   /** Set the URL to the CSS <link> that's sent to each client. Defaults to
    * https://oi.esphome.io/v1/webserver-v1.min.css
@@ -572,7 +575,7 @@ class WebServer final : public Controller, public Component, public AsyncWebHand
       } else if (val == PARSE_OFF || param_value == "0") {
         (call.*setter)(false);
       }
-      // PARSE_NONE/PARSE_TOGGLE: ignore invalid values
+      // PARSE_NONE/PARSE_TOGGLE: ignore invsalid values
     }
   }
 

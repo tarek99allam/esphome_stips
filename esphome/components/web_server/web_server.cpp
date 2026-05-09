@@ -12,12 +12,10 @@
 #include "esphome/core/util.h"
 /////////////////// begin: Part(b): STEP3 ///////////////////
 #include "esphome/components/api/api_pb2.h"
-#include "esphome/components/mqttSub/mqtt_sub.h"
 #include "esphome/components/wifi/wifi_component.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/version.h"
 /////////////////// end: Part(b): STEP3 ///////////////////
-extern esphome::mqtt_sub::mqttSub *my_mqtt_sub;
 
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
 #include "StreamString.h"
@@ -209,8 +207,8 @@ EntityMatchResult UrlMatch::match_entity(EntityBase *entity) const {
 
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
 // helper for allowing only unique entries in the queue
-void __attribute__((flatten))
-DeferredUpdateEventSource::deq_push_back_with_dedup_(void *source, message_generator_t *message_generator) {
+void __attribute__((flatten)) DeferredUpdateEventSource::deq_push_back_with_dedup_(
+    void *source, message_generator_t *message_generator) {
   DeferredEvent item(source, message_generator);
 
   // Use range-based for loop instead of std::find_if to reduce template instantiation overhead and binary size
@@ -2339,19 +2337,16 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 #endif
   const auto method = request->method();
 
-<<<<<<< HEAD
   // Static URL checks - use ESPHOME_F to keep strings in flash on ESP8266
   if (url == ESPHOME_F("/"))
     return true;
-=======
+  if (url == ESPHOME_F("/device_info"))
+    return true;
+  if (url == ESPHOME_F("/restart"))
+    return true;
+  if (url == ESPHOME_F("/reset_wifi"))
+    return true;
   // Static URL checks
-  static const char *const STATIC_URLS[] = {
-<<<<<<< HEAD
-    "/", "/device_info", "/restart", "/reset_wifi",
->>>>>>> 2cf3301bf (stips changes in webserver)
-=======
-      "/",       "/device_info", "/restart", "/reset_wifi",
->>>>>>> 9810584c4 (stips edits- no boad cast in captive portal with 200 sent - try hidden in even trys)
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
   if (url == ESPHOME_F("/events"))
     return true;
@@ -2486,15 +2481,17 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
   return false;
 }
 
-void WebServer::handle_info_index_request(
-    AsyncWebServerRequest *request) {
-  const std::string json_std = my_mqtt_sub->handle_info_index_request();
+void WebServer::handle_info_index_request(AsyncWebServerRequest *request) {
+  if (this->mqtt_sub_ == nullptr) {
+    request->send(500, "text/plain", "mqtt_sub not available");
+    return;
+  }
 
-  String json_arduino(json_std.c_str());
+  std::string response = this->mqtt_sub_->handle_info_index_request();
+  String json_arduino(response.c_str());
 
   request->send(200, F("application/json"), json_arduino);
 }
-
 void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 
