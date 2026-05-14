@@ -2482,6 +2482,8 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
 }
 
 void WebServer::handle_info_index_request(AsyncWebServerRequest *request) {
+#ifndef USE_ESP_IDF_VERSION_CODE
+
   if (this->mqtt_sub_ == nullptr) {
     request->send(500, "text/plain", "mqtt_sub not available");
     return;
@@ -2491,11 +2493,17 @@ void WebServer::handle_info_index_request(AsyncWebServerRequest *request) {
   String json_arduino(response.c_str());
 
   request->send(200, F("application/json"), json_arduino);
+#else
+  std::string response = this->mqtt_sub_->handle_info_index_request();
+
+  request->send(200, "application/json", response.c_str());
+#endif
 }
 void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 
   // When the connection is closed, THEN reboot
+#ifndef USE_ESP_IDF_VERSION_CODE
   request->onDisconnect([]() {
     wifi::global_wifi_component->clear_sta();
     wifi::global_wifi_component->clear_sta();
@@ -2503,16 +2511,19 @@ void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
     delay(3000);  // give browser time to read response
     App.safe_reboot();
   });
+#endif
 }
 
 void WebServer::handle_restart(AsyncWebServerRequest *request) {
   request->send(200, "application/json", "{\"status\":\"ok\"}");
+#ifndef USE_ESP_IDF_VERSION_CODE
 
   request->onDisconnect([]() {
     delay(3000);
     global_preferences->sync();
     App.safe_reboot();
   });
+#endif
 }
 void WebServer::handleRequest(AsyncWebServerRequest *request) {
 #ifdef USE_ESP32
