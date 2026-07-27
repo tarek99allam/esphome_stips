@@ -69,6 +69,10 @@ void CaptivePortal::handle_wifisave(AsyncWebServerRequest *request) {
     global_preferences->sync();
     App.safe_reboot();
   });
+#else
+  global_preferences->sync();
+  delay(3000);
+  App.safe_reboot();
 #endif
 }
 

@@ -15,8 +15,10 @@
 #include "esphome/components/wifi/wifi_component.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/version.h"
+#ifdef USE_CAPTIVE_PORTAL
+#include "esphome/components/captive_portal/captive_portal.h"
+#endif
 /////////////////// end: Part(b): STEP3 ///////////////////
-
 #if !defined(USE_ESP32) && defined(USE_ARDUINO)
 #include "StreamString.h"
 #endif
@@ -2338,8 +2340,15 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
   const auto method = request->method();
 
   // Static URL checks - use ESPHOME_F to keep strings in flash on ESP8266
-  if (url == ESPHOME_F("/"))
+  if (url == ESPHOME_F("/")) {
+#ifdef USE_CAPTIVE_PORTAL
+    if (captive_portal::global_captive_portal != nullptr && captive_portal::global_captive_portal->is_active() &&
+        method == HTTP_GET) {
+      return false;
+    }
+#endif
     return true;
+  }
   if (url == ESPHOME_F("/device_info"))
     return true;
   if (url == ESPHOME_F("/restart"))
