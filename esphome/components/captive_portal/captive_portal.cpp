@@ -1,9 +1,9 @@
 #include "captive_portal.h"
 #ifdef USE_CAPTIVE_PORTAL
-#include "esphome/core/log.h"
-#include "esphome/core/application.h"
-#include "esphome/components/wifi/wifi_component.h"
 #include "captive_index.h"
+#include "esphome/components/wifi/wifi_component.h"
+#include "esphome/core/application.h"
+#include "esphome/core/log.h"
 
 namespace esphome {
 namespace captive_portal {
