@@ -17,6 +17,8 @@ TimeBasedCover = time_based_ns.class_("TimeBasedCover", cover.Cover, cg.Componen
 
 CONF_HAS_BUILT_IN_ENDSTOP = "has_built_in_endstop"
 CONF_MANUAL_CONTROL = "manual_control"
+CONF_DIRECTION_CHANGE_WAIT_TIME = "direction_change_wait_time"
+CONF_INTERLOCK_WAIT_TIME = "interlock_wait_time"
 
 CONFIG_SCHEMA = (
     cover.cover_schema(TimeBasedCover)
@@ -30,6 +32,8 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_HAS_BUILT_IN_ENDSTOP, default=False): cv.boolean,
             cv.Optional(CONF_MANUAL_CONTROL, default=False): cv.boolean,
             cv.Optional(CONF_ASSUMED_STATE, default=True): cv.boolean,
+            cv.Optional(CONF_DIRECTION_CHANGE_WAIT_TIME): cv.positive_time_period_milliseconds,
+            cv.Optional(CONF_INTERLOCK_WAIT_TIME): cv.positive_time_period_milliseconds,
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
@@ -57,3 +61,8 @@ async def to_code(config):
     cg.add(var.set_has_built_in_endstop(config[CONF_HAS_BUILT_IN_ENDSTOP]))
     cg.add(var.set_manual_control(config[CONF_MANUAL_CONTROL]))
     cg.add(var.set_assumed_state(config[CONF_ASSUMED_STATE]))
+
+    if CONF_DIRECTION_CHANGE_WAIT_TIME in config:
+        cg.add(var.set_direction_change_waittime(config[CONF_DIRECTION_CHANGE_WAIT_TIME]))
+    elif CONF_INTERLOCK_WAIT_TIME in config:
+        cg.add(var.set_direction_change_waittime(config[CONF_INTERLOCK_WAIT_TIME]))

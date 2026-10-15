@@ -91,7 +91,7 @@ void CaptivePortal::start() {
 #if defined(USE_ESP32)
   // Create DNS server instance for ESP-IDF
   this->dns_server_ = make_unique<DNSServer>();
-  this->dns_server_->start(ip);
+  // this->dns_server_->start(ip);
 #elif defined(USE_ARDUINO)
   this->dns_server_ = make_unique<DNSServer>();
   this->dns_server_->setErrorReplyCode(DNSReplyCode::NoError);

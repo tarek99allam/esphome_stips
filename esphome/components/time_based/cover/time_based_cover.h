@@ -18,6 +18,9 @@ class TimeBasedCover : public cover::Cover, public Component {
   Trigger<> *get_stop_trigger() { return &this->stop_trigger_; }
   void set_open_duration(uint32_t open_duration) { this->open_duration_ = open_duration; }
   void set_close_duration(uint32_t close_duration) { this->close_duration_ = close_duration; }
+  void set_direction_change_waittime(uint32_t waittime) { this->direction_change_waittime_ = waittime; }
+  bool is_reversing() const { return this->is_reversing_; }
+
   cover::CoverTraits get_traits() override;
   void set_has_built_in_endstop(bool value) { this->has_built_in_endstop_ = value; }
   void set_manual_control(bool value) { this->manual_control_ = value; }
@@ -48,6 +51,8 @@ class TimeBasedCover : public cover::Cover, public Component {
   bool manual_control_{false};
   bool assumed_state_{false};
   cover::CoverOperation last_operation_{cover::COVER_OPERATION_OPENING};
+  optional<uint32_t> direction_change_waittime_{};
+  bool is_reversing_{false};
 };
 
 }  // namespace time_based

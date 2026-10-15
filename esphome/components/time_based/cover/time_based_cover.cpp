@@ -7,16 +7,22 @@ namespace esphome {
 namespace time_based {
 
 static const char *const TAG = "time_based.cover";
+static constexpr uint32_t DIRECTION_CHANGE_TIMEOUT_ID = 293847239;
 
 using namespace esphome::cover;
 
 void TimeBasedCover::dump_config() {
   LOG_COVER("", "Time Based Cover", this);
   ESP_LOGCONFIG(TAG,
-                "  Open Duration: %.1fs\n"
+                "  Open Duration: %.1fs
+"
                 "  Close Duration: %.1fs",
                 this->open_duration_ / 1e3f, this->close_duration_ / 1e3f);
+  if (this->direction_change_waittime_.has_value()) {
+    ESP_LOGCONFIG(TAG, "  Direction Change Wait Time: %.1fs", *this->direction_change_waittime_ / 1e3f);
+  }
 }
+
 void TimeBasedCover::setup() {
   auto restore = this->restore_state_();
   if (restore.has_value()) {
@@ -25,6 +31,7 @@ void TimeBasedCover::setup() {
     this->position = 0.5f;
   }
 }
+
 void TimeBasedCover::loop() {
   if (this->current_operation == COVER_OPERATION_IDLE)
     return;
@@ -35,6 +42,7 @@ void TimeBasedCover::loop() {
   this->recompute_position_();
 
   if (this->is_at_target_()) {
+    this->is_reversing_ = false;
     if (this->has_built_in_endstop_ &&
         (this->target_position_ == COVER_OPEN || this->target_position_ == COVER_CLOSED)) {
       // Don't trigger stop, let the cover stop by itself.
@@ -60,13 +68,16 @@ CoverTraits TimeBasedCover::get_traits() {
   traits.set_is_assumed_state(this->assumed_state_);
   return traits;
 }
+
 void TimeBasedCover::control(const CoverCall &call) {
   if (call.get_stop()) {
+    this->is_reversing_ = false;
     this->start_direction_(COVER_OPERATION_IDLE);
     this->publish_state();
   }
   if (call.get_toggle().has_value()) {
     if (this->current_operation != COVER_OPERATION_IDLE) {
+      this->is_reversing_ = false;
       this->start_direction_(COVER_OPERATION_IDLE);
       this->publish_state();
     } else {
@@ -108,12 +119,17 @@ void TimeBasedCover::control(const CoverCall &call) {
     }
   }
 }
+
 void TimeBasedCover::stop_prev_trigger_() {
+  if (this->direction_change_waittime_.has_value()) {
+    this->cancel_timeout(DIRECTION_CHANGE_TIMEOUT_ID);
+  }
   if (this->prev_command_trigger_ != nullptr) {
     this->prev_command_trigger_->stop_action();
     this->prev_command_trigger_ = nullptr;
   }
 }
+
 bool TimeBasedCover::is_at_target_() const {
   switch (this->current_operation) {
     case COVER_OPERATION_OPENING:
@@ -125,21 +141,40 @@ bool TimeBasedCover::is_at_target_() const {
       return true;
   }
 }
+
 void TimeBasedCover::start_direction_(CoverOperation dir) {
   if (dir == this->current_operation && dir != COVER_OPERATION_IDLE)
     return;
 
   this->recompute_position_();
+
+  // If moving and commanded to reverse direction, pause for direction_change_waittime
+  if (this->direction_change_waittime_.has_value() && dir != COVER_OPERATION_IDLE &&
+      this->current_operation != COVER_OPERATION_IDLE && dir != this->current_operation) {
+    const uint32_t waittime = *this->direction_change_waittime_;
+    ESP_LOGD(TAG, "'%s' - Reversing direction, pausing for %u ms.", this->name_.c_str(), waittime);
+    this->is_reversing_ = true;
+    this->start_direction_(COVER_OPERATION_IDLE);
+    this->publish_state();
+    this->set_timeout(DIRECTION_CHANGE_TIMEOUT_ID, waittime, [this, dir]() {
+      this->is_reversing_ = false;
+      this->start_direction_(dir);
+    });
+    return;
+  }
+
   Trigger<> *trig;
   switch (dir) {
     case COVER_OPERATION_IDLE:
       trig = &this->stop_trigger_;
       break;
     case COVER_OPERATION_OPENING:
+      this->is_reversing_ = false;
       this->last_operation_ = dir;
       trig = &this->open_trigger_;
       break;
     case COVER_OPERATION_CLOSING:
+      this->is_reversing_ = false;
       this->last_operation_ = dir;
       trig = &this->close_trigger_;
       break;
@@ -157,6 +192,7 @@ void TimeBasedCover::start_direction_(CoverOperation dir) {
   trig->trigger();
   this->prev_command_trigger_ = trig;
 }
+
 void TimeBasedCover::recompute_position_() {
   if (this->current_operation == COVER_OPERATION_IDLE)
     return;
