@@ -689,6 +689,8 @@ uint16_t APIConnection::try_send_switch_info(EntityBase *entity, APIConnection *
 void APIConnection::on_switch_command_request(const SwitchCommandRequest &msg) {
   ENTITY_COMMAND_GET(switch_::Switch, a_switch, switch)
 
+  a_switch->set_cause("home assistant");
+
   if (msg.state) {
     a_switch->turn_on();
   } else {
