@@ -24,6 +24,7 @@
 #endif
 
 #include <cstdlib>
+#include <memory>
 
 #ifdef USE_LIGHT
 #include "esphome/components/light/light_json_schema.h"
@@ -2556,7 +2557,15 @@ void WebServer::handle_logs_index_request(AsyncWebServerRequest *request) {
   }
 
 #ifndef USE_ESP_IDF_VERSION_CODE
-  request->send(200, wants_json ? "application/json" : "text/html", response.c_str());
+  auto shared_resp = std::make_shared<std::string>(std::move(response));
+  request->sendChunked(wants_json ? "application/json" : "text/html",
+      [shared_resp](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        if (index >= shared_resp->length())
+          return 0;
+        size_t to_copy = std::min(maxLen, shared_resp->length() - index);
+        memcpy(buffer, shared_resp->data() + index, to_copy);
+        return to_copy;
+      });
 #else
   AsyncWebServerResponse *http_response =
       request->beginResponse(200, wants_json ? "application/json" : "text/html", response);
@@ -2583,7 +2592,6 @@ void WebServer::handle_restart(AsyncWebServerRequest *request) {
 #ifndef USE_ESP_IDF_VERSION_CODE
 
   request->onDisconnect([]() {
-    delay(3000);
     global_preferences->sync();
     App.safe_reboot();
   });
