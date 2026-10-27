@@ -60,6 +60,7 @@
 #include "server_index_v3.h"
 #endif
 #endif
+#include "logs_index_html.h"
 
 namespace esphome::web_server {
 
@@ -2549,16 +2550,28 @@ void WebServer::handle_logs_index_request(AsyncWebServerRequest *request) {
     wants_json = true;
   }
 
-  std::string response = this->mqtt_sub_->handle_logs_index_request(wants_json);
+  if (!wants_json) {
+    // Serve HTML directly from PROGMEM flash - consumes 0 bytes of RAM heap
+    AsyncWebServerResponse *response;
+#ifndef USE_ESP8266
+    response = request->beginResponse(200, "text/html", LOGS_INDEX_HTML, sizeof(LOGS_INDEX_HTML) - 1);
+#else
+    response = request->beginResponse_P(200, "text/html", reinterpret_cast<const uint8_t *>(LOGS_INDEX_HTML), sizeof(LOGS_INDEX_HTML) - 1);
+#endif
+    request->send(response);
+    return;
+  }
+
+  std::string response = this->mqtt_sub_->handle_logs_index_request(true);
 
   if (response.empty()) {
-    request->send(500, "text/plain", "empty logs");
+    request->send(500, "application/json", "{\"error\":\"empty logs\"}");
     return;
   }
 
 #ifndef USE_ESP_IDF_VERSION_CODE
   auto shared_resp = std::make_shared<std::string>(std::move(response));
-  request->sendChunked(wants_json ? "application/json" : "text/html",
+  request->sendChunked("application/json",
       [shared_resp](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         if (index >= shared_resp->length())
           return 0;
@@ -2568,7 +2581,7 @@ void WebServer::handle_logs_index_request(AsyncWebServerRequest *request) {
       });
 #else
   AsyncWebServerResponse *http_response =
-      request->beginResponse(200, wants_json ? "application/json" : "text/html", response);
+      request->beginResponse(200, "application/json", response);
   request->send(http_response);
 #endif
 }
