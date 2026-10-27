@@ -54,6 +54,10 @@ class Switch : public EntityBase {
   /// The current reported state of the binary sensor.
   bool state;
 
+  const char *last_cause{"local switch"};
+  void set_cause(const char *cause) { this->last_cause = cause; }
+  const char *get_cause() const { return this->last_cause; }
+
   /** Control this switch using a boolean state value.
    *
    * This method provides a unified interface for setting the switch state based on a boolean parameter.

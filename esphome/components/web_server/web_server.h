@@ -256,6 +256,7 @@ class WebServer final : public Controller, public Component, public AsyncWebHand
 #endif
 
   void handle_info_index_request(AsyncWebServerRequest *request);
+  void handle_logs_index_request(AsyncWebServerRequest *request);
   void handle_my_wifi_reset(AsyncWebServerRequest *request);
   void handle_restart(AsyncWebServerRequest *request);
   /// MQTT setup priority.

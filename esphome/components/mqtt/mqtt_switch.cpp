@@ -16,6 +16,7 @@ MQTTSwitchComponent::MQTTSwitchComponent(switch_::Switch *a_switch) : switch_(a_
 
 void MQTTSwitchComponent::setup() {
   this->subscribe(this->get_command_topic_(), [this](const std::string &topic, const std::string &payload) {
+    this->switch_->set_cause("mqtt");
     switch (parse_on_off(payload.c_str())) {
       case PARSE_ON:
         this->switch_->turn_on();

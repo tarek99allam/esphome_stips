@@ -717,6 +717,7 @@ json::SerializationBuffer<> WebServer::text_sensor_json_(text_sensor::TextSensor
 enum SwitchAction : uint8_t { SWITCH_ACTION_NONE, SWITCH_ACTION_TOGGLE, SWITCH_ACTION_TURN_ON, SWITCH_ACTION_TURN_OFF };
 
 static void execute_switch_action(switch_::Switch *obj, SwitchAction action) {
+  obj->set_cause("web server");
   switch (action) {
     case SWITCH_ACTION_TOGGLE:
       obj->toggle();
@@ -2351,6 +2352,8 @@ bool WebServer::canHandle(AsyncWebServerRequest *request) const {
   }
   if (url == ESPHOME_F("/device_info"))
     return true;
+  if (url == ESPHOME_F("/logs"))
+    return true;
   if (url == ESPHOME_F("/restart"))
     return true;
   if (url == ESPHOME_F("/reset_wifi"))
@@ -2533,6 +2536,33 @@ void WebServer::handle_info_index_request(AsyncWebServerRequest *request) {
 
 #endif
 }
+
+void WebServer::handle_logs_index_request(AsyncWebServerRequest *request) {
+  if (this->mqtt_sub_ == nullptr) {
+    request->send(500, "text/plain", "mqtt_sub not available");
+    return;
+  }
+
+  bool wants_json = false;
+  if (request->hasParam("format") && request->getParam("format")->value() == "json") {
+    wants_json = true;
+  }
+
+  std::string response = this->mqtt_sub_->handle_logs_index_request(wants_json);
+
+  if (response.empty()) {
+    request->send(500, "text/plain", "empty logs");
+    return;
+  }
+
+#ifndef USE_ESP_IDF_VERSION_CODE
+  request->send(200, wants_json ? "application/json" : "text/html", response.c_str());
+#else
+  AsyncWebServerResponse *http_response =
+      request->beginResponse(200, wants_json ? "application/json" : "text/html", response);
+  request->send(http_response);
+#endif
+}
 void WebServer::handle_my_wifi_reset(AsyncWebServerRequest *request) {
   request->send(200, "application/json", "{\"status\":\"ok\"}");
 
@@ -2574,6 +2604,10 @@ void WebServer::handleRequest(AsyncWebServerRequest *request) {
   }
   if (request->url() == "/device_info") {
     this->handle_info_index_request(request);
+    return;
+  }
+  if (request->url() == "/logs") {
+    this->handle_logs_index_request(request);
     return;
   }
 
